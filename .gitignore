@@ -3,4 +3,5 @@
 *.out 
 compile_flags.txt 
 main
+test.c 
 

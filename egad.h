@@ -1,4 +1,4 @@
-//	A scalar scalard autodifferentiation library
+//	A scalar valued autodifferentiation library
 #ifndef EGAD_H
 #define EGAD_H 
 #include <stdio.h> 
@@ -25,15 +25,21 @@ typedef enum {
 	TANH,
 	RELU,
 	SIN,
-	COS
+	COS,
+
+
+	//	TODO
+	LOG, 
+	EXP, 
+
 } OPTYPE;
 
 struct scalar {
 	OPTYPE op;
 	struct scalar* previous[PREVS];
 	double data;
-	double grad; //	grad holds the value of the derivative of the child node with respect to the parent node
-	graph* tape;
+	graph* tape; // tape is the computational graph in which a scalar instance forms a node.
+	double grad; //	grad holds the value of the derivative of the child node with respect to the root node of tape. 
 } ;
 
 
@@ -48,14 +54,13 @@ scalar* scalar_mul(scalar* inp1, scalar* inp2);
 scalar* scalar_pow(scalar* inp1, scalar* exponent);
 scalar* scalar_sigmoid(scalar* inp1);
 scalar* scalar_tanh(scalar* inp1);
+scalar* scalar_log(scalar* inp1);
+scalar* scalar_exp(scalar* inp1);
 scalar* scalar_sin(scalar* inp1);
 scalar* scalar_cos(scalar* inp1);
 scalar* scalar_relu(scalar* inp1);
 void grad(scalar* out);
 bool scalar_equality(scalar* inp1, scalar* inp2);
-
-
-
 
 struct graph {
 	scalar** nodes;

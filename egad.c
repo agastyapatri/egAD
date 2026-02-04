@@ -22,6 +22,10 @@ const char* get_optype_string(OPTYPE op){
 			return "sin";
 		case (COS):
 			return "cos";
+		case (LOG):
+			return "log";
+		case (EXP):
+			return "exp";
 	} 
 	return NULL;
 }
@@ -93,6 +97,16 @@ scalar* scalar_tanh(scalar* inp1){
 	out->previous[0] = inp1;
 	return out;
 }
+scalar* scalar_log(scalar* inp1){
+	scalar* out = scalar_init(log(inp1->data), LOG, inp1->tape);
+	out->previous[0] = inp1;
+	return out;
+}
+scalar* scalar_exp(scalar* inp1){
+	scalar* out = scalar_init(exp(inp1->data), EXP, inp1->tape);
+	out->previous[0] = inp1;
+	return out;
+}
 
 scalar* scalar_sin(scalar* inp1){
 	scalar* out = scalar_init(sin(inp1->data), SIN, inp1->tape);
@@ -153,6 +167,12 @@ void grad(scalar* out){
 		case RELU: 
 			out->previous[0]->grad += out->grad * ((out->data > 0 ) ? 1 : 0);
 			break; 
+		case LOG: 
+			out->previous[0]->grad += out->grad * (1.0 / out->data);
+			break; 
+		case EXP: 
+			out->previous[0]->grad += out->grad * (out->data);
+			break; 
 	}
 }
 
@@ -174,6 +194,10 @@ void graph_push_back(graph* tape, scalar* val){
 }
 
 void graph_print(graph* tape){
+	if(*(tape->ref_count) == 0){
+		perror("graph is empty\n");
+		exit(1);
+	}
 	printf("Graph([\n");
 	for(size_t i = 0; i < tape->num_nodes; i++){
 		// if(i != tape->num_nodes-1)
@@ -186,20 +210,37 @@ void graph_print(graph* tape){
 }
 
 void graph_free(graph* tape){
-	if(tape->ref_count == 0){
-		for(size_t i = 0; i < tape->num_nodes; i++)
-			free(tape->nodes[i]);
+	for(size_t i = 0; i < tape->num_nodes; i++)
+		scalar_free(tape->nodes[i]);
+	if(*(tape->ref_count) == 0){
 		free(tape->nodes);
 		free(tape);
 	}
 }
 
+
+//	TODO: Figure out toposort
 void backward(scalar* out){
 	out->grad = 1;
 	scalar* temp = out;
+	// scalar* visited_nodes[out->tape->num_nodes];
+
+	int count = 0;
 	while(temp){
+		// if(visited_nodes[count] != temp)
+		// 	visited_nodes[count] = temp;
 		grad(temp);
 		temp = temp->previous[0];
+		count += 1;
 	}
 	free(temp);
 }
+
+
+
+
+
+
+
+
+
