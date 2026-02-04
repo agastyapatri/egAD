@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "autodiff.h"
+#include "egad.h"
 int main(){
 	/*
 	 *	a = 10
@@ -17,6 +17,13 @@ int main(){
 	scalar* c = scalar_sin(a);
 	scalar* d = scalar_cos(b);
 	scalar* e = scalar_add(c, d);
+
+
+
+	
+
+
+
 	graph* compgraph = graph_init();
 	graph_push_back(compgraph, a);
 	graph_push_back(compgraph, b);
@@ -41,9 +48,3 @@ int main(){
 
 
 
-	// graph_push_back(compgraph, a);
-	// graph_push_back(compgraph, b);
-	// graph_push_back(compgraph, c);
-	// graph_print(compgraph);
-	// graph_free(compgraph);
-	// compgraph = NULL;

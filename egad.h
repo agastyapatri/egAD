@@ -1,8 +1,9 @@
 //	A scalar scalard autodifferentiation library
-#ifndef AUTODIFF_H
-#define AUTODIFF_H 
+#ifndef EGAD_H
+#define EGAD_H 
 #include <stdio.h> 
 #include <stdlib.h> 
+#include <stdbool.h> 
 #include <math.h> 
 #define PREVS 2
 #define NEXT 2
@@ -42,9 +43,8 @@ scalar* scalar_tanh(scalar* inp1);
 scalar* scalar_sin(scalar* inp1);
 scalar* scalar_cos(scalar* inp1);
 scalar* scalar_relu(scalar* inp1);
-
 void scalar_backward(scalar* out);
-
+bool scalar_equality(scalar* inp1, scalar* inp2);
 
 
 

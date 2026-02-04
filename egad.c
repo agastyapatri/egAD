@@ -1,4 +1,4 @@
-#include "autodiff.h"
+#include "egad.h"
 scalar* scalar_init(double data, OPTYPE operation){
 	scalar* a = (scalar*)malloc(sizeof(scalar));
 	a->data = data; 
@@ -99,6 +99,9 @@ scalar* scalar_relu(scalar* inp1){
 	return out;
 }
 
+bool scalar_equality(scalar* inp1, scalar* inp2){
+	return (inp1->data == inp2->data) && (inp1->grad == inp2->grad);
+}
 /*
  *	z = x ^ y 
  *	ln(z) = y * ln(x) 
