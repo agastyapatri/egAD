@@ -1,14 +1,4 @@
 #include "egad.h"
-scalar* scalar_init(double data, OPTYPE operation){
-	scalar* a = (scalar*)malloc(sizeof(scalar));
-	a->data = data; 
-	a->grad = 0;
-	a->op = operation;
-	a->previous[0] = NULL;
-	a->previous[1] = NULL;
-	return a;
-
-}
 
 const char* get_optype_string(OPTYPE op){
 	switch (op) {
@@ -36,32 +26,55 @@ const char* get_optype_string(OPTYPE op){
 	return NULL;
 }
 
+scalar* scalar_init(double data, OPTYPE operation, graph* tape){
+	scalar* a = (scalar*)malloc(sizeof(scalar));
+	a->data = data; 
+	a->grad = 0;
+	a->op = operation;
+	a->previous[0] = NULL;
+	a->previous[1] = NULL;
+	a->tape = tape;
+	if(tape){
+		graph_push_back(a->tape, a);
+		(*(a->tape->ref_count))++;
+	}
+	return a;
+}
+
+void scalar_free(scalar* val){
+	if(val->tape){
+		(*(val->tape->ref_count))--;
+	}
+	free(val);
+}
+
+
 void scalar_print(scalar* val){
 	printf("scalar(%lf, %s)", val->data, get_optype_string(val->op));
 }
 
 scalar* scalar_add(scalar* inp1, scalar* inp2){
-	scalar* out = scalar_init(inp1->data + inp2->data, ADD);
+	scalar* out = scalar_init(inp1->data + inp2->data, ADD, inp1->tape);
 	out->previous[0] = inp1;
 	out->previous[1] = inp2;
 	return out;
 }
 
 scalar* scalar_sub(scalar* inp1, scalar* inp2){
-	scalar* out = scalar_init(inp1->data - inp2->data, SUB);
+	scalar* out = scalar_init(inp1->data - inp2->data, SUB, inp1->tape);
 	out->previous[0] = inp1;
 	out->previous[1] = inp2;
 	return out;
 }
 scalar* scalar_mul(scalar* inp1, scalar* inp2){
-	scalar* out = scalar_init(inp1->data * inp2->data, MUL);
+	scalar* out = scalar_init(inp1->data * inp2->data, MUL, inp1->tape);
 	out->previous[0] = inp1;
 	out->previous[1] = inp2;
 	return out;
 }
 
 scalar* scalar_pow(scalar* inp1, scalar* exponent){
-	scalar* out = scalar_init(pow(inp1->data, exponent->data), POW);
+	scalar* out = scalar_init(pow(inp1->data, exponent->data), POW, inp1->tape);
 	out->previous[0] = inp1;
 	out->previous[1] = exponent;
 
@@ -69,32 +82,33 @@ scalar* scalar_pow(scalar* inp1, scalar* exponent){
 }
 
 scalar* scalar_sigmoid(scalar* inp1){
-	scalar* out = scalar_init(1 / (1 + exp(-1*inp1->data)), POW);
+	double sigm = 1.0 / (1 + exp(-(inp1->data)));
+	scalar* out = scalar_init(sigm, SIGMOID, inp1->tape);
 	out->previous[0] = inp1;
 	return out;
 }
 
 scalar* scalar_tanh(scalar* inp1){
-	scalar* out = scalar_init(tanh(inp1->data), TANH);
+	scalar* out = scalar_init(tanh(inp1->data), TANH, inp1->tape);
 	out->previous[0] = inp1;
 	return out;
 }
 
 scalar* scalar_sin(scalar* inp1){
-	scalar* out = scalar_init(sin(inp1->data), SIN);
+	scalar* out = scalar_init(sin(inp1->data), SIN, inp1->tape);
 	out->previous[0] = inp1;
 	return out;
 }
 
 scalar* scalar_cos(scalar* inp1){
-	scalar* out = scalar_init(cos(inp1->data), COS);
+	scalar* out = scalar_init(cos(inp1->data), COS, inp1->tape);
 	out->previous[0] = inp1;
 	return out;
 }
 
 
 scalar* scalar_relu(scalar* inp1){
-	scalar* out = scalar_init((inp1->data > 0) ? inp1->data : 0, RELU);
+	scalar* out = scalar_init((inp1->data > 0) ? inp1->data : 0, RELU, inp1->tape);
 	out->previous[0] = inp1;
 	return out;
 }
@@ -102,13 +116,9 @@ scalar* scalar_relu(scalar* inp1){
 bool scalar_equality(scalar* inp1, scalar* inp2){
 	return (inp1->data == inp2->data) && (inp1->grad == inp2->grad);
 }
-/*
- *	z = x ^ y 
- *	ln(z) = y * ln(x) 
- *	(1/z)*(dz / dy) = ln(x) 
- *	y->grad = dz / dy = z * ln(x)
- * */ 
-void scalar_backward(scalar* out){
+
+
+void grad(scalar* out){
 	switch(out->op){
 		case NONE: 
 			break; 
@@ -150,6 +160,8 @@ graph* graph_init(){
 	graph* g = (graph*)malloc(sizeof(graph));
 	g->num_nodes = 0;
 	g->nodes = (scalar**)calloc(GRAPH_SIZE, sizeof(scalar*));
+	g->ref_count = (int*)calloc(1, sizeof(int));
+	// (*(g->ref_count))++;
 	return g;
 }
 
@@ -174,17 +186,20 @@ void graph_print(graph* tape){
 }
 
 void graph_free(graph* tape){
-	for(size_t i = 0; i < tape->num_nodes; i++)
-		free(tape->nodes[i]);
-	free(tape->nodes);
-	free(tape);
+	if(tape->ref_count == 0){
+		for(size_t i = 0; i < tape->num_nodes; i++)
+			free(tape->nodes[i]);
+		free(tape->nodes);
+		free(tape);
+	}
 }
 
-void graph_backward(graph* tape){
-	tape->nodes[tape->num_nodes - 1]->grad = 1;
-	scalar* out = tape->nodes[tape->num_nodes - 1];
-	while(out){
-		scalar_backward(out);
-		out = out->previous[0];
+void backward(scalar* out){
+	out->grad = 1;
+	scalar* temp = out;
+	while(temp){
+		grad(temp);
+		temp = temp->previous[0];
 	}
+	free(temp);
 }

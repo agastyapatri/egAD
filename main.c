@@ -2,38 +2,31 @@
 #include "egad.h"
 int main(){
 	/*
-	 *	a = 10
-	 *	b = 20 
-	 *	c = a  + b 
-	 *	d = c^3
-	 *
-	 *
-	 *	c.grad = dd/dc = 3*c^2 
-	 *	a.grad = dd / da = dd/dc * dc/da = c.grad * dc / da 
-	 *	b.grad = dd / db = dd/dc * dc/db = c.grad * dc / db
+	 *	a = 2.0 
+	 *	b = 3.0 
+	 *	c = sin(a)
+	 *	d = cos(b)
+	 *	e = c + d
+	 *	f = 1 / (1 + exp(sin(a)*cos(b)))
 	 */ 
-	scalar* a = scalar_init(2.0, NONE);
-	scalar* b = scalar_init(3.0, NONE);
+	graph* cgraph = graph_init();
+
+	scalar* a = scalar_init(2.0, NONE, cgraph);
+	scalar* b = scalar_init(3.0, NONE, cgraph);
 	scalar* c = scalar_sin(a);
 	scalar* d = scalar_cos(b);
-	scalar* e = scalar_add(c, d);
-
-
-
+	scalar* e = scalar_mul(c, d);
+	scalar* f = scalar_sigmoid(e);
+	graph_print(cgraph);
+	printf("\n\n");
+	backward(f);
+	printf("%lf\n", f->grad);
+	printf("%lf\n", e->grad);
+	printf("%lf\n", d->grad);
+	printf("%lf\n", c->grad);
+	printf("%lf\n", b->grad);
+	printf("%lf\n", a->grad);
 	
-
-
-
-	graph* compgraph = graph_init();
-	graph_push_back(compgraph, a);
-	graph_push_back(compgraph, b);
-	graph_push_back(compgraph, c);
-	graph_push_back(compgraph, d);
-	graph_push_back(compgraph, e);
-	graph_backward(compgraph);
-
-
-
 
 
 	return 0;
