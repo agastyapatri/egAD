@@ -54,13 +54,14 @@ void scalar_free(scalar* val){
 
 
 void scalar_print(scalar* val){
-	printf("scalar(%lf, %s)", val->data, get_optype_string(val->op));
+	printf("scalar(data: %lf, grad: %lf, op: %s)", val->data, val->grad, get_optype_string(val->op));
 }
 
 scalar* scalar_add(scalar* inp1, scalar* inp2){
 	scalar* out = scalar_init(inp1->data + inp2->data, ADD, inp1->tape);
 	out->previous[0] = inp1;
 	out->previous[1] = inp2;
+
 	return out;
 }
 
@@ -181,7 +182,7 @@ graph* graph_init(){
 	g->num_nodes = 0;
 	g->nodes = (scalar**)calloc(GRAPH_SIZE, sizeof(scalar*));
 	g->ref_count = (int*)calloc(1, sizeof(int));
-	// (*(g->ref_count))++;
+
 	return g;
 }
 
@@ -221,26 +222,16 @@ void graph_free(graph* tape){
 
 //	TODO: Figure out toposort
 void backward(scalar* out){
+	if(!out)
+		return;
 	out->grad = 1;
 	scalar* temp = out;
-	// scalar* visited_nodes[out->tape->num_nodes];
-
-	int count = 0;
+	//	This is horseshit
 	while(temp){
-		// if(visited_nodes[count] != temp)
-		// 	visited_nodes[count] = temp;
 		grad(temp);
+		if(temp->previous[1])
+			grad(temp->previous[1]);
 		temp = temp->previous[0];
-		count += 1;
 	}
 	free(temp);
 }
-
-
-
-
-
-
-
-
-

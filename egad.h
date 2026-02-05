@@ -5,7 +5,7 @@
 #include <stdlib.h> 
 #include <stdbool.h> 
 #include <math.h> 
-#define PREVS 2
+#define NUM_PREVS 2
 #define NEXT 2
 #define GRAPH_SIZE 16
 #define GRAPH_EQUALITY(inp1, inp2) (inp1->tape == inp2->tape) 
@@ -26,9 +26,6 @@ typedef enum {
 	RELU,
 	SIN,
 	COS,
-
-
-	//	TODO
 	LOG, 
 	EXP, 
 
@@ -36,10 +33,10 @@ typedef enum {
 
 struct scalar {
 	OPTYPE op;
-	struct scalar* previous[PREVS];
+	struct scalar* previous[NUM_PREVS];
 	double data;
 	graph* tape; // tape is the computational graph in which a scalar instance forms a node.
-	double grad; //	grad holds the value of the derivative of the child node with respect to the root node of tape. 
+	double grad; //	grad holds the value of the derivative of the child node with respect to the root node of tape
 } ;
 
 
@@ -76,4 +73,4 @@ void backward(scalar* out);
 
 
 
-#endif /* ifndef AUTODIFF_H */
+#endif /* ifndef EGAD_H */
