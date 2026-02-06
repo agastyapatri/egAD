@@ -1,4 +1,6 @@
 #include "egad.h"
+#include <math.h>
+#include <math.h>
 
 const char* get_optype_string(OPTYPE op){
 	switch (op) {
@@ -199,7 +201,7 @@ void graph_print(graph* tape){
 		perror("graph is empty\n");
 		exit(1);
 	}
-	printf("Graph([\n");
+	printf("graph([\n");
 	for(size_t i = 0; i < tape->num_nodes; i++){
 		// if(i != tape->num_nodes-1)
 		// 	printf("\t");

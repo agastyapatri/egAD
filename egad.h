@@ -4,7 +4,6 @@
 #include <stdio.h> 
 #include <stdlib.h> 
 #include <stdbool.h> 
-#include <math.h> 
 #define NUM_PREVS 2
 #define NEXT 2
 #define GRAPH_SIZE 16
@@ -28,7 +27,6 @@ typedef enum {
 	COS,
 	LOG, 
 	EXP, 
-
 } OPTYPE;
 
 struct scalar {
