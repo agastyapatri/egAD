@@ -1,6 +1,7 @@
 #include "egad.h"
 #include <math.h>
 #include <math.h>
+#include <string.h>
 
 const char* get_optype_string(OPTYPE op){
 	switch (op) {
@@ -222,18 +223,45 @@ void graph_free(graph* tape){
 }
 
 
-//	TODO: Figure out toposort
-void backward(scalar* out){
-	if(!out)
-		return;
-	out->grad = 1;
-	scalar* temp = out;
-	//	This is horseshit
-	while(temp){
-		grad(temp);
-		if(temp->previous[1])
-			grad(temp->previous[1]);
-		temp = temp->previous[0];
+void graph_sort(scalar* out, scalar** sorted, int* sorted_size, scalar** visited, int* visited_size){
+	for(int i = 0; i < *visited_size; i++){
+		if(visited[i] == out)
+			return;
 	}
-	free(temp);
+	visited[*visited_size] = out;
+	(*visited_size)++;
+	for(int i = 0; i < NUM_PREVS; i++){
+		if(!out->previous[i])
+			break;
+		graph_sort(out->previous[i], sorted, sorted_size, visited, visited_size);
+	}
+	sorted[*sorted_size] = out;
+	(*sorted_size)++;
 }
+
+
+
+
+void backward(scalar* out){
+	size_t graph_size = out->tape->num_nodes;
+	scalar* sorted[graph_size];
+	scalar* visited[graph_size];
+	int sorted_size = 0;
+	int visited_size = 0;
+	graph_sort(out, sorted, &sorted_size, visited, &visited_size);
+	memcpy(out->tape->nodes, sorted, graph_size*sizeof(scalar*));
+	out->grad = 1.0;
+	for(int i = graph_size - 1; i >=0; i--){
+		grad(out->tape->nodes[i]);
+	}
+
+}
+
+
+
+
+
+
+
+
+

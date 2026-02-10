@@ -20,7 +20,10 @@ int main(){
 	scalar* h = scalar_exp(g);
 	scalar* i = scalar_pow(h, alpha);
 	scalar* j = scalar_sigmoid(i);
+	graph_print(cgraph);
 	backward(j);
+	printf("\n\n");
+
 	graph_print(cgraph);
 	return 0;
 }
