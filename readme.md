@@ -34,3 +34,5 @@ A couple of things to note:
 
 While it is not strictly necessary to use `struct graph` - it is entirely possible to traverse the current node's adjacent nodes without it - it forms a helpful utility to see the true "forward pass" of the set of operations that have taken place with `graph_print()` after it has been sorted.
 
+
+The actual gradient calculation is done by the `backward()`. `main.c` contains a simple example.
