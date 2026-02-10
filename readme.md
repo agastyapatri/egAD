@@ -1,55 +1,36 @@
 #   egAD! 
-A simple scalar valued autodifferentiation engine written in C. 
+A simple scalar valued autodifferentiation engine in C, written mostly for self edification.
 
 
-**TODO** 
-1.  Write the topological sorting algorithm for unsorted graphs  
-2.  add more ops to `OPTYPE`
-3.  write more tests for complicated math.
-4.  look at the structure of `HIPS/autograd` to get inspiration
-5.  look into how a graph can be implemented as an arena allocator, and the different nodes attached to it would just be pointers being assigned to it.
+The core of this library is the structure: 
+```c 
+typedef struct scalar {
+	OPTYPE op;                              // operation which yielded the scalar 
+	struct scalar* previous[NUM_PREVS];     // parent nodes in the graph. 
+	double data;                            
+	graph* tape;                            // computational graph in which a scalar instance forms a node.
+	double grad;                            // derivative of the child node with respect to the last computation tracked by the graph.
+} scalar;
+```
+Working in the background is: 
 
+```c 
+typedef struct graph {
+	scalar** nodes;         // scalars which have been automatically added to the graph after initialization
+	size_t num_nodes;       
+	int* ref_count;         // the graph is only freed when there are no nodes which refer to it, more of a sanity check than anything
+} graph;
+```
+This library also provides automatic operation tracking and mathematics on the `scalar` instances. To dynamically build the computational graph, it needs to be initialized before the nodes are added to it:
 
-##  TOPOLOGICAL SORTING
-Toposort finds a "Topological Order" - permutation of the nodes of the graph which corresponds to the order defined by all the edges of the graph. Every edge leads from node with a smaller vertex to a node with a larger one.
+```c 
+graph* compgraph = graph_init();
+scalar* node1 = scalar_init(10.0, NONE, compgraph);
+```
+A couple of things to note: 
 
-Topological order can be non unique( if there exist three nodes a, b, c for which there exist paths from a to b and a to c but not paths from b to c or c to b) 
+1.  `OPTYPE NONE` signifies that the scalar being created is a leaf node.  
+2.  Any scalars that are created using the graph's leaf nodes are automatically attached to it.
 
-Topological order only exists if the drected graph contains no cycles. Luckily in autodifferentiation, the nodes form a Directed Acyclic Graph. 
-
-If there is a cycle in the graph between nodes a and b, a will need to have a smaller index than b (because an edge goes from a to b), and a will also need to have a larger index than b (because there is an edge going from b to a). 
-
-**Every Directed Acyclic Graph contains at least one topological order**
-
-*   A common situtation which necessitates toposort: 
-    
-There are n variables with unknown values. For some variables, we know that one of them is less than the other. You have to check whether these constraints are contradictory, and if not, output the variables in ascending order.
-
-### The Algorithm
-Toposort uses DFS. 
-When astarting from some vertex v, DFS traverses along all edges outgoing from v. It stop at the edges for which the nodes have already been visited, and traverses along the rest of the edges and continues recursively at their nodes. 
-
-Thus, by the time of the function call `dfs(v)` has finished, all vertices that are reachable from v have been either directly or indirectly been visited by the search. 
-
-Let's append the vertex v to a list. Since all reachable vertices from v have been visited, they will have been appended to the list. If this is done for every vertex in the graph, with one or multiple DFS runs, For every edge
-`v->u` in the graph, `u` will appear earlier in this list than v, because u is reachable from v. 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+While it is not strictly necessary to use `struct graph` - it is entirely possible to traverse the current node's adjacent nodes without it - it forms a helpful utility to see the true "forward pass" of the set of operations that have taken place with `graph_print()` after it has been sorted.
 
