@@ -1,4 +1,5 @@
 #include "egad.h"
+#include <assert.h>
 #include <math.h>
 #include <math.h>
 #include <string.h>
@@ -11,6 +12,8 @@ const char* get_optype_string(OPTYPE op){
 			return "sub";
 		case(MUL):
 			return "mul";
+		case(DIV):
+			return "div";
 		case(POW):
 			return "pow";
 		case (SIGMOID):
@@ -33,110 +36,193 @@ const char* get_optype_string(OPTYPE op){
 	return NULL;
 }
 
-scalar* scalar_init(double data, OPTYPE operation, graph* tape){
-	scalar* a = (scalar*)malloc(sizeof(scalar));
+ad_value* ad_value_alloc(double data){
+	ad_value* a = (ad_value*)malloc(sizeof(ad_value));
+	if(!a)	return NULL;
 	a->data = data; 
 	a->grad = 0;
-	a->op = operation;
+	a->op = NONE;
 	a->previous[0] = NULL;
 	a->previous[1] = NULL;
-	a->tape = tape;
-	if(tape){
-		graph_push_back(a->tape, a);
-		(*(a->tape->ref_count))++;
-	}
+	a->ref_count = 1;
 	return a;
 }
 
-void scalar_free(scalar* val){
-	if(val->tape){
-		(*(val->tape->ref_count))--;
+double rand_normal(double mu, double sigma){
+	double n2 = 0.0; 
+	double n2_cached = 0.0; 
+	if(!n2_cached){
+		double u1 = rand() / (double)RAND_MAX;
+		double u2 = rand() / (double)RAND_MAX;
+		double r = sqrt(-2.0 * log(u1));
+		double theta = 2 * PI * u2;
+		n2 = r * sin(theta);
+		n2_cached = 1;
+		return (r * cos(theta) * sigma + mu);
 	}
-	free(val);
+	else{
+		n2_cached = 0;
+		return (n2*sigma + mu);
+	}
 }
 
 
-void scalar_print(scalar* val){
-	printf("scalar(data: %lf, grad: %lf, op: %s)", val->data, val->grad, get_optype_string(val->op));
+ad_value* ad_value_rand_normal(double mu, double sigma){
+	return ad_value_alloc(rand_normal(mu, sigma));
 }
 
-scalar* scalar_add(scalar* inp1, scalar* inp2){
-	scalar* out = scalar_init(inp1->data + inp2->data, ADD, inp1->tape);
+ad_value* ad_value_random_gauss(double mu, double sigma){
+	double n2 = 0.0; 
+	double n2_cached = 0.0; 
+	double data;
+	if(!n2_cached){
+		// double u1 = rand_double();
+		double u1 = rand() / (double)RAND_MAX;
+		double u2 = rand() / (double)RAND_MAX;
+		double r = sqrt(-2.0 * log(u1));
+		double theta = 2 * PI * u2;
+		n2 = r * sin(theta);
+		n2_cached = 1;
+		data = r * cos(theta) * sigma + mu;
+	}
+	else{
+		n2_cached = 0;
+		data = n2*sigma + mu;
+	}
+	ad_value* out = ad_value_alloc(data);
+	return out;
+}
+
+void ad_value_free(ad_value* val){
+	val->ref_count--;
+	if(val->ref_count == 0){
+		if(val->previous[0])
+			ad_value_free(val->previous[0]);
+		if(val->previous[1])
+			ad_value_free(val->previous[1]);
+		free(val);
+	}
+}
+
+
+void ad_value_print(ad_value* val){
+	printf("ad_value(data: %lf, grad: %lf, op: %s)", val->data, val->grad, get_optype_string(val->op));
+}
+
+ad_value* ad_value_add(ad_value* inp1, ad_value* inp2){
+	ad_value* out = ad_value_alloc(inp1->data + inp2->data);
+	out->op = ADD;
 	out->previous[0] = inp1;
 	out->previous[1] = inp2;
+	out->previous[0]->ref_count++;
+	out->previous[1]->ref_count++;
 
 	return out;
 }
 
-scalar* scalar_sub(scalar* inp1, scalar* inp2){
-	scalar* out = scalar_init(inp1->data - inp2->data, SUB, inp1->tape);
+ad_value* ad_value_sub(ad_value* inp1, ad_value* inp2){
+	ad_value* out = ad_value_alloc(inp1->data - inp2->data);
+	out->op = SUB;
 	out->previous[0] = inp1;
 	out->previous[1] = inp2;
+	out->previous[0]->ref_count++;
+	out->previous[1]->ref_count++;
 	return out;
 }
-scalar* scalar_mul(scalar* inp1, scalar* inp2){
-	scalar* out = scalar_init(inp1->data * inp2->data, MUL, inp1->tape);
+ad_value* ad_value_mul(ad_value* inp1, ad_value* inp2){
+	ad_value* out = ad_value_alloc(inp1->data * inp2->data);
+	out->op = MUL;
 	out->previous[0] = inp1;
 	out->previous[1] = inp2;
+	out->previous[0]->ref_count++;
+	out->previous[1]->ref_count++;
 	return out;
 }
 
-scalar* scalar_pow(scalar* inp1, scalar* exponent){
-	scalar* out = scalar_init(pow(inp1->data, exponent->data), POW, inp1->tape);
+ad_value* ad_value_div	(ad_value* inp1, ad_value* inp2){
+	ad_value* out = ad_value_alloc(inp1->data / inp2->data);
+	out->op = DIV;
+	out->previous[0] = inp1;
+	out->previous[1] = inp2;
+	out->previous[0]->ref_count++;
+	out->previous[1]->ref_count++;
+	return out;
+
+}
+
+
+
+ad_value* ad_value_pow(ad_value* inp1, ad_value* exponent){
+	ad_value* out = ad_value_alloc(pow(inp1->data, exponent->data));
+	out->op = POW;
 	out->previous[0] = inp1;
 	out->previous[1] = exponent;
-
+	out->previous[0]->ref_count++;
+	out->previous[1]->ref_count++;
 	return out;
 }
 
-scalar* scalar_sigmoid(scalar* inp1){
-	double sigm = 1.0 / (1 + exp(-(inp1->data)));
-	scalar* out = scalar_init(sigm, SIGMOID, inp1->tape);
+ad_value* ad_value_sigmoid(ad_value* inp1){
+	ad_value* out = ad_value_alloc(1.0 / (1 + exp(-(inp1->data))));
+	out->op = SIGMOID;
 	out->previous[0] = inp1;
+	out->previous[0]->ref_count++;
 	return out;
 }
 
-scalar* scalar_tanh(scalar* inp1){
-	scalar* out = scalar_init(tanh(inp1->data), TANH, inp1->tape);
+ad_value* ad_value_tanh(ad_value* inp1){
+	ad_value* out = ad_value_alloc(tanh(inp1->data));
+	out->op = TANH;
 	out->previous[0] = inp1;
+	out->previous[0]->ref_count++;
 	return out;
 }
-scalar* scalar_log(scalar* inp1){
-	scalar* out = scalar_init(log(inp1->data), LOG, inp1->tape);
+ad_value* ad_value_log(ad_value* inp1){
+	ad_value* out = ad_value_alloc(log(inp1->data));
+	out->op = LOG;
 	out->previous[0] = inp1;
+	out->previous[0]->ref_count++;
 	return out;
 }
-scalar* scalar_exp(scalar* inp1){
-	scalar* out = scalar_init(exp(inp1->data), EXP, inp1->tape);
+ad_value* ad_value_exp(ad_value* inp1){
+	ad_value* out = ad_value_alloc(exp(inp1->data));
+	out->op = EXP;
 	out->previous[0] = inp1;
-	return out;
-}
-
-scalar* scalar_sin(scalar* inp1){
-	scalar* out = scalar_init(sin(inp1->data), SIN, inp1->tape);
-	out->previous[0] = inp1;
-	return out;
-}
-
-scalar* scalar_cos(scalar* inp1){
-	scalar* out = scalar_init(cos(inp1->data), COS, inp1->tape);
-	out->previous[0] = inp1;
+	out->previous[0]->ref_count++;
 	return out;
 }
 
-
-scalar* scalar_relu(scalar* inp1){
-	scalar* out = scalar_init((inp1->data > 0) ? inp1->data : 0, RELU, inp1->tape);
+ad_value* ad_value_sin(ad_value* inp1){
+	ad_value* out = ad_value_alloc(sin(inp1->data));
+	out->op = SIN;
 	out->previous[0] = inp1;
+	out->previous[0]->ref_count++;
 	return out;
 }
 
-bool scalar_equality(scalar* inp1, scalar* inp2){
+ad_value* ad_value_cos(ad_value* inp1){
+	ad_value* out = ad_value_alloc(cos(inp1->data));
+	out->op = COS;
+	out->previous[0] = inp1;
+	out->previous[0]->ref_count++;
+	return out;
+}
+
+
+ad_value* ad_value_relu(ad_value* inp1){
+	ad_value* out = ad_value_alloc((inp1->data > 0) ? inp1->data : 0);
+	out->op = RELU;
+	out->previous[0] = inp1;
+	out->previous[0]->ref_count++;
+	return out;
+}
+
+bool ad_value_equality(ad_value* inp1, ad_value* inp2){
 	return (inp1->data == inp2->data) && (inp1->grad == inp2->grad);
 }
 
 
-void grad(scalar* out){
+void grad(ad_value* out){
 	switch(out->op){
 		case NONE: 
 			break; 
@@ -151,6 +237,10 @@ void grad(scalar* out){
 		case MUL: 
 			out->previous[0]->grad += out->grad * out->previous[1]->data; 
 			out->previous[1]->grad += out->grad * out->previous[0]->data; 
+			break; 
+		case DIV: 
+			out->previous[0]->grad += out->grad * 1 / out->previous[1]->data; 
+			out->previous[1]->grad += out->grad * (-out->previous[0]->data / (pow(out->previous[1]->data, 2))); 
 			break; 
 		case POW:
 			out->previous[0]->grad += out->grad * out->previous[1]->data * pow(out->previous[0]->data, out->previous[1]->data - 1) ;
@@ -180,50 +270,8 @@ void grad(scalar* out){
 	}
 }
 
-graph* graph_init(){
-	graph* g = (graph*)malloc(sizeof(graph));
-	g->num_nodes = 0;
-	g->nodes = (scalar**)calloc(GRAPH_SIZE, sizeof(scalar*));
-	g->ref_count = (int*)calloc(1, sizeof(int));
 
-	return g;
-}
-
-void graph_push_back(graph* tape, scalar* val){
-	tape->nodes[tape->num_nodes] = val;
-	tape->num_nodes++;
-	if((tape->num_nodes+1) % GRAPH_SIZE == 0){
-		tape->nodes = realloc(tape->nodes, (tape->num_nodes+GRAPH_SIZE)*sizeof(scalar*));
-	}
-}
-
-void graph_print(graph* tape){
-	if(*(tape->ref_count) == 0){
-		perror("graph is empty\n");
-		exit(1);
-	}
-	printf("graph([\n");
-	for(size_t i = 0; i < tape->num_nodes; i++){
-		// if(i != tape->num_nodes-1)
-		// 	printf("\t");
-		printf("\t");
-		scalar_print(tape->nodes[i]);
-		printf("\n");
-	}
-	printf("])\n");
-}
-
-void graph_free(graph* tape){
-	for(size_t i = 0; i < tape->num_nodes; i++)
-		scalar_free(tape->nodes[i]);
-	if(*(tape->ref_count) == 0){
-		free(tape->nodes);
-		free(tape);
-	}
-}
-
-
-void graph_sort(scalar* out, scalar** sorted, int* sorted_size, scalar** visited, int* visited_size){
+void graph_sort(ad_value* out, ad_value** sorted, int* sorted_size, ad_value** visited, int* visited_size){
 	for(int i = 0; i < *visited_size; i++){
 		if(visited[i] == out)
 			return;
@@ -240,28 +288,15 @@ void graph_sort(scalar* out, scalar** sorted, int* sorted_size, scalar** visited
 }
 
 
-
-
-void backward(scalar* out){
-	size_t graph_size = out->tape->num_nodes;
-	scalar* sorted[graph_size];
-	scalar* visited[graph_size];
+void ad_value_backward(ad_value* out){
+	size_t graph_size = GRAPH_SIZE;
+	ad_value* sorted[graph_size];
+	ad_value* visited[graph_size];
 	int sorted_size = 0;
 	int visited_size = 0;
 	graph_sort(out, sorted, &sorted_size, visited, &visited_size);
-	memcpy(out->tape->nodes, sorted, graph_size*sizeof(scalar*));
 	out->grad = 1.0;
-	for(int i = graph_size - 1; i >=0; i--){
-		grad(out->tape->nodes[i]);
+	for(int i = sorted_size - 1; i >=0; i--){
+		grad(sorted[i]);
 	}
-
 }
-
-
-
-
-
-
-
-
-

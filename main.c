@@ -8,23 +8,20 @@
 
 
 int main(){
-	graph* cgraph = graph_init();
-	scalar* a = scalar_init(2.0, NONE, cgraph);
-	scalar* b = scalar_init(3.0, NONE, cgraph);
-	scalar* c = scalar_sin(a);
-	scalar* d = scalar_cos(b);
-	scalar* e = scalar_mul(c, d);
-	scalar* alpha = scalar_init(5.0, NONE, cgraph);
-	scalar* f = scalar_sigmoid(e);
-	scalar* g = scalar_relu(f);
-	scalar* h = scalar_exp(g);
-	scalar* i = scalar_pow(h, alpha);
-	scalar* j = scalar_sigmoid(i);
-	graph_print(cgraph);
-	backward(j);
-	printf("\n\n");
+	ad_value* a = ad_value_alloc(2.0);
+	ad_value* b = ad_value_alloc(3.0);
+	ad_value* c = ad_value_sin(a);
+	ad_value* d = ad_value_cos(b);
+	ad_value* e = ad_value_mul(c, d);
+	ad_value* alpha = ad_value_alloc(5.0);
+	ad_value* f = ad_value_sigmoid(e);
+	ad_value* g = ad_value_relu(f);
+	ad_value* h = ad_value_exp(g);
+	ad_value* i = ad_value_pow(h, alpha);
+	ad_value* j = ad_value_sigmoid(i);
 
-	graph_print(cgraph);
+	ad_value_backward(j);
+
 	return 0;
 }
 

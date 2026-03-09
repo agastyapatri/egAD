@@ -1,4 +1,7 @@
 #   egAD! 
+(04/03/2026): 
+
+
 A simple scalar valued autodifferentiation engine in C, written mostly for self edification.
 
 

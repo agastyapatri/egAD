@@ -1,4 +1,4 @@
-//	A scalar valued autodifferentiation library
+//	A ad_value ad_valued autodifferentiation library
 #ifndef EGAD_H
 #define EGAD_H 
 #include <stdio.h> 
@@ -6,19 +6,20 @@
 #include <stdbool.h> 
 #define NUM_PREVS 2
 #define NEXT 2
-#define GRAPH_SIZE 16
+#define GRAPH_SIZE 256
+#define PI 3.1415926545897932
+#define MU 0 
+#define SIGMA 0.08
 #define GRAPH_EQUALITY(inp1, inp2) (inp1->tape == inp2->tape) 
 
-struct scalar; 
-struct graph; 
-typedef struct scalar scalar; 
-typedef struct graph graph;
+typedef unsigned int uint;
 
 typedef enum {
 	NONE,
 	ADD,
 	SUB,
 	MUL,
+	DIV,
 	POW,
 	SIGMOID,
 	TANH,
@@ -29,46 +30,35 @@ typedef enum {
 	EXP, 
 } OPTYPE;
 
-struct scalar {
+typedef struct ad_value {
 	OPTYPE op;
-	struct scalar* previous[NUM_PREVS];
 	double data;
-	graph* tape; // tape is the computational graph in which a scalar instance forms a node.
-	double grad; //	grad holds the value of the derivative of the child node with respect to the root node of tape
-} ;
+	double grad;
+	int ref_count;
+	struct ad_value* previous[NUM_PREVS]; 
+} ad_value;
 
 
 const char* get_optype_string(OPTYPE op);
-scalar* scalar_init(double data, OPTYPE operation, graph* tape);
-void scalar_print(scalar* val);
-void scalar_free(scalar* val);
+ad_value* ad_value_random_gauss(double mu, double sigma);
+ad_value* ad_value_alloc	(double data);
+ad_value* ad_value_rand_normal(double mu, double sigma);
+void ad_value_print		(ad_value* val);
+void ad_value_free		(ad_value* val);
 
-scalar* scalar_add(scalar* inp1, scalar* inp2);
-scalar* scalar_sub(scalar* inp1, scalar* inp2);
-scalar* scalar_mul(scalar* inp1, scalar* inp2);
-scalar* scalar_pow(scalar* inp1, scalar* exponent);
-scalar* scalar_sigmoid(scalar* inp1);
-scalar* scalar_tanh(scalar* inp1);
-scalar* scalar_log(scalar* inp1);
-scalar* scalar_exp(scalar* inp1);
-scalar* scalar_sin(scalar* inp1);
-scalar* scalar_cos(scalar* inp1);
-scalar* scalar_relu(scalar* inp1);
-void grad(scalar* out);
-bool scalar_equality(scalar* inp1, scalar* inp2);
-
-struct graph {
-	scalar** nodes;
-	size_t num_nodes;
-	int* ref_count;
-};
-
-graph* graph_init();
-void graph_push_back(graph* tape,scalar* val);
-void graph_print(graph* tape);
-void graph_free(graph* tape);
-void backward(scalar* out);
-
-
-
-#endif /* ifndef EGAD_H */
+ad_value* ad_value_add	(ad_value* inp1, ad_value* inp2);
+ad_value* ad_value_sub	(ad_value* inp1, ad_value* inp2);
+ad_value* ad_value_mul	(ad_value* inp1, ad_value* inp2);
+ad_value* ad_value_div	(ad_value* inp1, ad_value* inp2);
+ad_value* ad_value_pow	(ad_value* inp1, ad_value* exponent);
+ad_value* ad_value_sigmoid(ad_value* inp1);
+ad_value* ad_value_tanh	(ad_value* inp1);
+ad_value* ad_value_log	(ad_value* inp1);
+ad_value* ad_value_exp	(ad_value* inp1);
+ad_value* ad_value_sin	(ad_value* inp1);
+ad_value* ad_value_cos	(ad_value* inp1);
+ad_value* ad_value_relu	(ad_value* inp1);
+bool ad_value_equality 	(ad_value* inp1, ad_value* inp2);
+void ad_value_backward 	(ad_value* out);
+double rand_normal(double mu, double sigma);
+#endif
