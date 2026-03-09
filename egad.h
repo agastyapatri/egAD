@@ -59,6 +59,6 @@ ad_value* ad_value_sin	(ad_value* inp1);
 ad_value* ad_value_cos	(ad_value* inp1);
 ad_value* ad_value_relu	(ad_value* inp1);
 bool ad_value_equality 	(ad_value* inp1, ad_value* inp2);
-void ad_value_backward 	(ad_value* out);
+void ad_backward 	(ad_value* out);
 double rand_normal(double mu, double sigma);
 #endif

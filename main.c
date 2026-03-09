@@ -20,7 +20,7 @@ int main(){
 	ad_value* i = ad_value_pow(h, alpha);
 	ad_value* j = ad_value_sigmoid(i);
 
-	ad_value_backward(j);
+	ad_backward(j);
 
 	return 0;
 }
